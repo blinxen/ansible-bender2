@@ -1,0 +1,11 @@
+- hosts: all
+  vars:
+    var1: value
+    ansible_bender:
+      base_image: python:3.14
+      target_image:
+        name: ansible_bender_example
+        entrypoint: [cat, /message]
+  tasks:
+    - name: Create message
+      shell: echo "You created your first image"
