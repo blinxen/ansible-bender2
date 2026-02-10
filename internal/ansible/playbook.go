@@ -111,7 +111,7 @@ func populateVariables(config *config.Config, vars map[string]any, vars_files []
 				"name":  "Let Ansible expand variables",
 				"hosts": "localhost",
 				"vars": map[string]any{
-					"ab_vars":            vars,
+					"ab_vars": vars,
 				},
 				"vars_files":   vars_files,
 				"gather_facts": gatherFacts,
