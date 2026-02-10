@@ -4,6 +4,8 @@ go 1.25.4
 
 require (
 	github.com/containers/buildah v1.42.1
+	github.com/sirupsen/logrus v1.9.3
+	github.com/spf13/cobra v1.10.1
 	go.podman.io/image/v5 v5.38.0
 	go.podman.io/storage v1.61.0
 	go.yaml.in/yaml/v4 v4.0.0-rc.3
@@ -98,9 +100,7 @@ require (
 	github.com/sigstore/fulcio v1.7.1 // indirect
 	github.com/sigstore/protobuf-specs v0.4.1 // indirect
 	github.com/sigstore/sigstore v1.9.5 // indirect
-	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/smallstep/pkcs7 v0.1.1 // indirect
-	github.com/spf13/cobra v1.10.1 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/stefanberger/go-pkcs11uri v0.0.0-20230803200340-78284954bff6 // indirect
 	github.com/sylabs/sif/v2 v2.22.0 // indirect
