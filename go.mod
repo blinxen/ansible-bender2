@@ -1,6 +1,6 @@
 module github.com/blinxen/ansible-bender2
 
-go 1.25.4
+go 1.25
 
 require (
 	github.com/containers/buildah v1.42.1
