@@ -11,7 +11,3 @@ formatters:
     - goimports
     - golines
     - swaggo
-linters:
-  # TODO: Enable later
-  disable:
-    - errcheck

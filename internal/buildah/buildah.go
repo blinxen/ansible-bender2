@@ -16,7 +16,6 @@ func newWorkingContainer(ctx context.Context, config config.Config) error {
 	if err != nil {
 		return err
 	}
-	defer buildStore.Shutdown(false)
 
 	builderOpts := buildah.BuilderOptions{
 		FromImage: config.BaseImage,
@@ -26,7 +25,10 @@ func newWorkingContainer(ctx context.Context, config config.Config) error {
 
 	builder, err := buildah.OpenBuilder(buildStore, config.WorkingContainer.Name)
 	if err == nil && config.WorkingContainer.NoCache {
-		builder.Delete()
+		err = builder.Delete()
+		if err != nil {
+			return err
+		}
 		builder = nil
 	}
 
@@ -48,10 +50,14 @@ func newWorkingContainer(ctx context.Context, config config.Config) error {
 
 	for _, v := range config.WorkingContainer.Volumes {
 		volume := strings.Split(v, ":")
-		builder.Add(volume[1], false, buildah.AddAndCopyOptions{}, volume[0])
+		err = builder.Add(volume[1], false, buildah.AddAndCopyOptions{}, volume[0])
+		if err != nil {
+			GetLogger().Error("could not add volume", "src", volume[0], "dest", volume[1])
+		}
 	}
 
-	return nil
+	_, err = buildStore.Shutdown(false)
+	return err
 }
 
 func commitWorkingContainer(ctx *context.Context, config config.Config) (string, error) {
@@ -59,7 +65,6 @@ func commitWorkingContainer(ctx *context.Context, config config.Config) (string,
 	if err != nil {
 		return "", err
 	}
-	defer buildStore.Shutdown(false)
 
 	imageRef, err := imageStore.Transport.ParseStoreReference(buildStore, config.TargetImage.Name)
 	if err != nil {
@@ -69,7 +74,10 @@ func commitWorkingContainer(ctx *context.Context, config config.Config) (string,
 	builder, err := buildah.OpenBuilder(buildStore, config.WorkingContainer.Name)
 	builder.Logger = GetLogger()
 	if err == nil && config.WorkingContainer.NoCache {
-		builder.Delete()
+		err = builder.Delete()
+		if err != nil {
+			return "", err
+		}
 		builder = nil
 	}
 
@@ -111,6 +119,11 @@ func commitWorkingContainer(ctx *context.Context, config config.Config) (string,
 		return "", err
 	}
 
+	_, err = buildStore.Shutdown(false)
+	if err != nil {
+		return "", err
+	}
+
 	return imageId, nil
 }
 
@@ -119,15 +132,18 @@ func deleteWorkingContainer(config config.Config) error {
 	if err != nil {
 		return err
 	}
-	defer buildStore.Shutdown(false)
 
 	builder, err := buildah.OpenBuilder(buildStore, config.WorkingContainer.Name)
 	builder.Logger = GetLogger()
 	if err != nil {
-		builder.Delete()
+		err = builder.Delete()
+		if err != nil {
+			return err
+		}
 	}
 
-	return nil
+	_, err = buildStore.Shutdown(false)
+	return err
 }
 
 func getBuildStore() (storage.Store, error) {
