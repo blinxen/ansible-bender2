@@ -26,12 +26,17 @@ var buildCmd = &cobra.Command{
 }
 
 func init() {
-	buildCmd.Flags().BoolVar(&noCache, "no-cache", false, "do not use caching mecahnism")
+	buildCmd.Flags().BoolVar(
+		&noCache,
+		"no-cache",
+		false,
+		"if set and a playbook execution failed previously then don't reuse the last failed state and create a clean environment",
+	)
 	buildCmd.Flags().BoolVar(
 		&createImageOnFailure,
 		"create-image-on-failure",
 		false,
-		"if the playbook run fails then create a image with the current state",
+		"if the playbook run fails then create a image with the failed state",
 	)
 	buildCmd.Flags().BoolVar(&noSquash, "no-squash", false, "do not squash image")
 }

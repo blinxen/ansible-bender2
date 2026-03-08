@@ -54,11 +54,7 @@ Usage
 ansible-bender2 build <PLAYBOOK>
 ```
 
-The following flags are available:
-
-* `--no-cache`: do not use caching mecahnism
-* `--create-image-on-failure`: if the playbook run fails then create a image with the current state
-* `--no-squash`: do not squash image
+Run `ansible-bender2 build --help` for all available flags.
 
 License
 -------
