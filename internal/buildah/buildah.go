@@ -34,7 +34,7 @@ func newWorkingContainer(ctx context.Context, config config.Config) error {
 	}
 
 	if builder == nil {
-		// TODO: Add log entry to tell user if image is being pulled
+		logger.Debug("creating new working container; if image missing then it will be pulled")
 		builder, err = buildah.NewBuilder(ctx, buildStore, builderOpts)
 		if err != nil {
 			return err
