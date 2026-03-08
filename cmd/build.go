@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/blinxen/ansible-bender2/internal/ansible"
@@ -38,7 +37,6 @@ func init() {
 }
 
 func build(cmd *cobra.Command, args []string) {
-	exitCode := 0
 	if len(args) != 1 {
 		logrus.Fatalf("expected single playbook argument, got %d arguments instead", len(args))
 	}
@@ -57,31 +55,35 @@ func build(cmd *cobra.Command, args []string) {
 	}
 	err = ansible.RunPlaybook(benderConfig)
 	if err != nil {
-		exitCode = 1
 		ansible.GetLogger().Error("playbook execution failed")
-		benderConfig.Squash = false
-		benderConfig.TargetImage.Name = fmt.Sprintf(
-			"%s-failed-%d",
-			benderConfig.TargetImage.Name,
-			time.Now().Unix(),
-		)
-	}
-	if err == nil || benderConfig.CreateFailImage {
-		imageId, err := buildah.CommitWorkingContainer(benderConfig)
-		if err != nil {
-			buildah.GetLogger().WithError(err).Error("working container committing failed")
+		if benderConfig.CreateFailImage {
+			benderConfig.Squash = false
+			benderConfig.TargetImage.Name = fmt.Sprintf(
+				"%s-failed-%d",
+				benderConfig.TargetImage.Name,
+				time.Now().Unix(),
+			)
+			commitImage(benderConfig)
+			logrus.Fatal("failure image was created")
 		}
-		buildah.GetLogger().Infof(
-			"created OCI image (%s) with id: %s\n",
-			benderConfig.TargetImage.Name,
-			imageId,
-		)
-		fmt.Println(imageId)
 	}
+	commitImage(benderConfig)
 	err = buildah.DeleteWorkingContainer(benderConfig)
 	if err != nil {
 		buildah.GetLogger().Fatal("working container deletion failed")
 	}
+}
 
-	os.Exit(exitCode)
+func commitImage(config *config.Config) {
+	imageId, err := buildah.CommitWorkingContainer(config)
+	if err != nil {
+		buildah.GetLogger().WithError(err).Error("working container committing failed")
+		return
+	}
+	buildah.GetLogger().Infof(
+		"created OCI image (%s) with id: %s\n",
+		config.TargetImage.Name,
+		imageId,
+	)
+	fmt.Println(imageId)
 }
