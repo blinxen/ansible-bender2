@@ -12,6 +12,7 @@ import (
 )
 
 func newWorkingContainer(ctx context.Context, config config.Config) error {
+	logger := GetLogger()
 	buildStore, err := getBuildStore()
 	if err != nil {
 		return err
@@ -20,7 +21,7 @@ func newWorkingContainer(ctx context.Context, config config.Config) error {
 	builderOpts := buildah.BuilderOptions{
 		FromImage: config.BaseImage,
 		Container: config.WorkingContainer.Name,
-		Logger:    GetLogger(),
+		Logger:    logger,
 	}
 
 	builder, err := buildah.OpenBuilder(buildStore, config.WorkingContainer.Name)
@@ -39,6 +40,7 @@ func newWorkingContainer(ctx context.Context, config config.Config) error {
 			return err
 		}
 	}
+	builder.Logger = logger
 
 	for k, v := range config.TargetImage.Environment {
 		builder.SetEnv(k, v)
@@ -52,7 +54,7 @@ func newWorkingContainer(ctx context.Context, config config.Config) error {
 		volume := strings.Split(v, ":")
 		err = builder.Add(volume[1], false, buildah.AddAndCopyOptions{}, volume[0])
 		if err != nil {
-			GetLogger().Error("could not add volume", "src", volume[0], "dest", volume[1])
+			logger.Error("could not add volume", "src", volume[0], "dest", volume[1])
 		}
 	}
 
