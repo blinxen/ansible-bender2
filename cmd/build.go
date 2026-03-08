@@ -59,6 +59,7 @@ func build(cmd *cobra.Command, args []string) {
 	if err != nil {
 		exitCode = 1
 		ansible.GetLogger().Error("playbook execution failed")
+		benderConfig.Squash = false
 		benderConfig.TargetImage.Name = fmt.Sprintf(
 			"%s-failed-%d",
 			benderConfig.TargetImage.Name,
