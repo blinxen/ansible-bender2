@@ -1,18 +1,25 @@
 BINARY=${BINARY:-ansible-bender2}
 
 remove_image() {
-    buildah rmi "$1" &>/dev/null || true
+    local image="$1"
+    local match="$(buildah images --format '{{.Name}}:{{.Tag}}' 2>/dev/null | grep -E "${image}" || true)"
+    buildah rmi "$match" &>/dev/null || true
 }
 
 image_exists() {
-    local name="$1"
-    local id="$(buildah images -q "$name" 2>/dev/null)"
-    [[ -n "$id" ]]
+    local image="$1"
+    local match="$(buildah images --format '{{.Name}}:{{.Tag}}' 2>/dev/null | grep -E "${image}" || true)"
+    [[ -n "$match" ]]
+}
+
+image_not_exists() {
+    local image="$1"
+    ! image_exists "$image"
 }
 
 inspect_image() {
-    local name="$1"
-    buildah inspect --type=image "$name"
+    local image="$1"
+    buildah inspect --type=image "$image"
 }
 
 image_has_label() {

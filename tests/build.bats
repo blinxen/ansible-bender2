@@ -16,8 +16,9 @@ setup() {
 
 teardown() {
     remove_image "${IMAGE_NAME}"
-    remove_image "${IMAGE_NAME}-failed"
+    remove_image "${IMAGE_NAME}-failed.*"
     buildah rm --all &>/dev/null || true
+    buildah rmi --prune &>/dev/null || true
 }
 
 ##############################################################################
@@ -25,11 +26,24 @@ teardown() {
 ##############################################################################
 
 run_build() {
-    run "${BINARY}" build -v "$@" "${PLAYBOOK_FILE}"
-    if [[ "$status" -ne 0 ]]; then
+    local expected_code="${1:-0}"
+    shift
+
+    run "${BINARY}" build "$@" "${PLAYBOOK_FILE}"
+    if [[ "$status" -ne "$expected_code" ]]; then
         echo "Output:"
-        echo "$output"        # won't show by default
+        echo "$output"
     fi
+
+    [ "$status" -eq "$expected_code" ]
+}
+
+run_build_successfully() {
+    run_build 0 "$@"
+}
+
+run_build_failing() {
+    run_build 1 "$@"
 }
 
 write_playbook() {
@@ -85,9 +99,9 @@ write_playbook() {
         that:
           - \"'hello-from-host' in content.stdout\"
 "
-    run_build
-    [ "$status" -eq 0 ]
+    run_build_successfully
     image_exists "${IMAGE_NAME}"
+    image_not_exists "${IMAGE_NAME}-failed.*"
     image_has_env "${IMAGE_NAME}" "MY_APP=bats-test"
     image_has_env "${IMAGE_NAME}" "DEBUG=false"
     image_has_label "${IMAGE_NAME}" "app" "ansible-bender2"
@@ -102,9 +116,9 @@ write_playbook() {
     image_layer_count_equals "${IMAGE_NAME}" 1
 
     # building the same playbook twice is idempotent
-    run_build
-    [ "$status" -eq 0 ]
+    run_build_successfully
     image_exists "${IMAGE_NAME}"
+    image_not_exists "${IMAGE_NAME}-failed.*"
     image_has_env "${IMAGE_NAME}" "MY_APP=bats-test"
     image_has_env "${IMAGE_NAME}" "DEBUG=false"
     image_has_label "${IMAGE_NAME}" "app" "ansible-bender2"
@@ -119,25 +133,47 @@ write_playbook() {
     image_layer_count_equals "${IMAGE_NAME}" 1
 }
 
-# TODO: Add test for no-cache
-# TODO: Add test for no-squash
-# TODO: Add test for save-failure-image
-# TODO: Add test for no failure image by default
+@test "build with --no-squash produces more than one layer" {
+    write_playbook "
+- hosts: all
+  vars:
+    ansible_bender:
+      base_image: 'python:3.14'
+      target_image:
+        name: ${IMAGE_NAME}
+  tasks:
+    - name: First task
+      command: echo first
+    - name: Second task
+      command: echo second
+    - name: Third task
+      command: echo third
+"
+    run_build_successfully --no-squash
+    image_exists "${IMAGE_NAME}"
+    image_not_exists "${IMAGE_NAME}-failed.*"
 
-# @test "building with all flags succeeds" {
-#     write_playbook "
-# - hosts: all
-#   vars:
-#     ansible_bender:
-#       base_image: 'fedora:rawhide'
-#       target_image:
-#         name: ${IMAGE_NAME}
-#   tasks:
-#     - name: Echo
-#       command: echo all-flags
-# "
-#     run_build --no-cache --squash --no-fail-image
-#     [ "$status" -eq 0 ]
-#     [[ "$output" != *"panic"* ]]
-#     image_exists "${IMAGE_NAME}"
-# }
+    count=$(inspect_image "python:3.14" | jq -e ".OCIv1.rootfs.diff_ids | length + 1")
+    image_layer_count_equals "${IMAGE_NAME}" $count
+}
+
+@test "build saves a failure image when --save-failed-image is set" {
+    write_playbook "
+- hosts: all
+  vars:
+    ansible_bender:
+      base_image: 'python:3.14'
+      target_image:
+        name: ${IMAGE_NAME}
+  tasks:
+    - name: Succeed first
+      command: echo before-failure
+    - name: Intentional failure
+      command: /bin/false
+    - name: Never reached
+      command: echo after-failure
+"
+    run_build_failing --create-image-on-failure
+    image_exists "${IMAGE_NAME}-failed-.*"
+    image_not_exists "${IMAGE_NAME}$"
+}
