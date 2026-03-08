@@ -11,3 +11,9 @@ formatters:
     - goimports
     - golines
     - swaggo
+linters:
+  exclusions:
+    rules:
+      - linters:
+        - errcheck
+        source: "defer buildStore.Shutdown"
