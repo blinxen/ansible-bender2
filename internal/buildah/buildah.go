@@ -74,14 +74,10 @@ func commitWorkingContainer(ctx *context.Context, config config.Config) (string,
 	}
 
 	builder, err := buildah.OpenBuilder(buildStore, config.WorkingContainer.Name)
-	builder.Logger = GetLogger()
-	if err == nil && config.WorkingContainer.NoCache {
-		err = builder.Delete()
-		if err != nil {
-			return "", err
-		}
-		builder = nil
+	if err != nil {
+		return "", err
 	}
+	builder.Logger = GetLogger()
 
 	if len(config.TargetImage.User) > 0 {
 		builder.SetUser(config.TargetImage.User)
@@ -136,12 +132,13 @@ func deleteWorkingContainer(config config.Config) error {
 	}
 
 	builder, err := buildah.OpenBuilder(buildStore, config.WorkingContainer.Name)
-	builder.Logger = GetLogger()
 	if err != nil {
-		err = builder.Delete()
-		if err != nil {
-			return err
-		}
+		return err
+	}
+	builder.Logger = GetLogger()
+	err = builder.Delete()
+	if err != nil {
+		return err
 	}
 
 	_, err = buildStore.Shutdown(false)
