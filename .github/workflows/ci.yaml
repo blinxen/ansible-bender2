@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    paths:
+      - "go.mod"
+      - "go.sum"
+      - "**.go"
+    branches:
+      - "master"
+  pull_request:
+    paths:
+      - "go.mod"
+      - "go.sum"
+      - "**.go"
+    branches:
+      - "master"
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      - name: Set up Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c
+        with:
+          go-version-file: go.mod
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libseccomp-dev \
+            libgpgme-dev \
+            libdevmapper-dev \
+            libbtrfs-dev \
+            libssl-dev \
+            libsqlite3-dev \
+            pkg-config \
+            bats \
+            ansible
+
+      - name: Set up rootless container support
+        run: |
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          sudo usermod --add-subuids 100000-165535 runner
+          sudo usermod --add-subgids 100000-165535 runner
+
+      - name: Build
+        run: make build
+
+      - name: Test
+        run: make lint test

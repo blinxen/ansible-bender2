@@ -1,5 +1,5 @@
 BINARY_NAME := ansible-bender2
-GOLANG_CI_LINT_VERSION := v2.11.1
+GOLANG_CI_LINT_VERSION := v2.12.2
 
 build:
 	go build -o bin/$(BINARY_NAME) main.go
